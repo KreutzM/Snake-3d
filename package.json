@@ -1,0 +1,19 @@
+{
+  "name": "snake-first-person",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/game.js --bundle --minify --format=iife --outfile=game.js --legal-comments=linked",
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "esbuild": "0.28.2"
+  }
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101311">
+  <title>Snake — Eine neue Dimension</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header><a class="brand" href="./"><span class="brand-icon">S</span> ARCADE<span class="brand-light">/ LAB</span></a><span class="edition"><i></i> KLASSIKER. NEU GEDACHT.</span><button class="icon-button" id="sound" aria-label="Ton ausschalten (M)" title="Ton ausschalten (M)" aria-pressed="true">♪ <span>AN</span></button></header>
+    <main>
+      <section class="intro"><div><div class="eyebrow">001 / THE ORIGINAL, REIMAGINED</div><h1>Snake<span class="dimension">3D</span><span class="period">.</span></h1><p>Ein Klassiker. Eine neue Dimension. Dein nächster Rekord.</p></div><div class="intro-mark" aria-hidden="true">↗</div></section>
+      <div class="game-layout">
+        <section class="arena" aria-label="Snake Spielfeld">
+          <div class="arena-top"><span><i class="status-dot"></i> <span id="status">BEREIT</span><span id="level-hud">L1 · EINSTIEG · 0/10</span></span><span id="lives-hud" role="img" aria-label="3 von 3 Leben">♥♥♥</span><button id="camera" class="camera-button" aria-label="Zur Verfolgerkamera wechseln (C)">EGO ↗</button></div>
+          <canvas id="game" aria-label="3D Snake in Egoperspektive. Maus und A/D lenken, W/S ändern das Tempo, C wechselt die Kamera."></canvas>
+          <div class="fps-hud"><div id="food-direction">↑ ENERGIE · 8 M</div><div id="gold-direction"></div><div class="combo-hud"><span id="combo-hud-label">COMBO ×1</span><div class="combo-track"><div id="combo-hud-fill"></div></div></div><div id="pickup-feedback" role="status" aria-live="polite"></div><span class="crosshair" aria-hidden="true">+</span><div class="map-wrap"><span>ARENA / LIVE</span><canvas id="minimap" width="128" height="128" aria-label="Minikarte: Schlange grün, Energie orange, Gold als gelbe Raute, Portal als blauer Ring, Säulen grau"></canvas></div></div>
+          <div class="overlay" id="overlay"><div class="overlay-tag" id="overlay-tag">FIRST PERSON / FULL IMMERSION</div><h2 id="overlay-title">Mitten im Spiel.</h2><p id="overlay-copy">Du bist der Kopf. Dein Körper folgt dir.<br>Drei Arenen. Drei Leben. Zehn Kugeln pro Level.<br>Öffne das blaue Portal und erreiche den Ausgang.<br>Bei einem Unfall wiederholst du das aktuelle Level.<br>Ohne Unfall: +100 Bonuspunkte pro Level.</p><button class="primary" id="start">Spiel starten <span>↗</span></button><small id="start-hint">Maus / A D · lenken &nbsp; W / S · Tempo &nbsp; Esc · Maus freigeben</small></div>
+          <div class="touch-controls" aria-label="Touch-Steuerung"><span>Halten zum Lenken</span><button data-dir="up" aria-label="Beschleunigen">↑</button><div><button data-dir="left" aria-label="Links lenken">←</button><button data-dir="down" aria-label="Bremsen">↓</button><button data-dir="right" aria-label="Rechts lenken">→</button></div></div>
+          <div class="arena-bottom"><span><span class="live-dot"></span> <span id="arena-note">36 × 36 M · DEINE ARENA. DEIN RUN.</span></span><button id="pause" disabled>Ⅱ <span>PAUSE</span></button></div>
+        </section>
+        <aside>
+          <section class="level-card"><div class="eyebrow">DEINE REISE</div><strong id="level-name">1 / 3 · Einstieg</strong><div class="stat"><span>Leben im Run</span><strong id="lives-value">3 / 3</strong></div><p id="clean-bonus">Ohne Unfall: +100 Punkte</p><ol id="level-route"></ol><div class="combo-track"><div id="level-fill"></div></div><p id="level-progress">0 / 10 KUGELN · PORTAL ÖFFNEN</p></section><section class="score-card"><div class="eyebrow">DEIN RUN <span>↗</span></div><div class="score" id="score">000</div><div class="record"><span>⌁ &nbsp; BESTLEISTUNG</span><strong id="best">000</strong></div><div class="score-line"></div><div class="stat"><span>Länge</span><strong id="length">6 <span>Meter</span></strong></div><div class="stat"><span>Gesammelt</span><strong id="eaten">0 <span>Energie</span></strong></div><div id="combo-panel"><div class="combo-heading"><span>COMBO</span><strong id="combo-value">×1</strong></div><div class="combo-track"><div id="combo-fill"></div></div><small id="combo-clock">Sammle die nächste Kugel</small><div id="gold-status">◇ GOLD IN 15 s</div></div></section>
+          <section class="settings-card"><div class="eyebrow">DEIN TEMPO</div><div class="segmented" role="group" aria-label="Geschwindigkeit"><button data-speed="chill">Chill<small>2,4 m/s</small></button><button data-speed="flow" class="selected" aria-pressed="true">Flow<small>4,8 m/s</small></button><button data-speed="rush">Rush<small>9,6 m/s</small></button></div><p id="speed-copy">4,8 m/s · Doppelt so schnell wie Chill.</p></section>
+          <section class="controls-card"><div class="eyebrow">SO LÄUFT’S</div><div class="control-row"><div class="keys"><kbd>W</kbd><div><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div></div><span>Maus / A D · lenken<br><small>W / S · schneller / langsamer</small></span></div><div class="control-row space-row"><kbd>SPACE</kbd><span>Start / Pause</span></div><div class="control-row space-row"><kbd>C</kbd><span>Kamera wechseln</span></div><div class="control-row space-row"><kbd>M</kbd><span>Ton an / aus</span></div><p class="rules">Energie: 10 Punkte · Gold: 30 Punkte<br>Innerhalb von 6 s weitersammeln: bis ×5!<br>Gold bleibt 10 s. 10 Kugeln öffnen das Portal.<br>Drei Level · Punkte bleiben beim Wechsel.<br>Drei Leben pro Run · Unfall: Level wiederholen.<br>Versuchspunkte verfallen. Unfallfrei: +100.</p><div class="legend"><i class="snake-swatch"></i> Das bist du <i class="food-swatch"></i> Deine Energie</div></section>
+        </aside>
+      </div>
+      <div class="under-game"><span><span class="orange-star">✳</span> Einfach zu lernen. Schwer aufzuhören.</span><span>KEIN DOWNLOAD. NUR EIN WEITERER RUN.</span></div>
+    </main><footer><span>BUILT FOR THE JOY OF PLAY.</span><span>EST. 1976 <span class="footer-cross">×</span> REBORN IN 3D</span></footer>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
