@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SnakeSimulation, LEVELS, COMBO_WINDOW, CLEAN_LEVEL_BONUS, wrapAngle, distance } from './simulation.js';
+import { terrainHeight } from './terrain.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('game');
@@ -186,12 +187,30 @@ if (renderer) {
   const neonMat = new THREE.MeshBasicMaterial({ color: '#bdf986' });
   const orangeMat = mat('#ff9b52', { emissive: '#ff702b', emissiveIntensity: 1.5, roughness: .2 });
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  function terrainGeometry(level, segments = 36) {
+    const size = level.halfSize * 2, vertices = [], indices = [];
+    for (let iz = 0; iz <= segments; iz++) for (let ix = 0; ix <= segments; ix++) {
+      const x = -level.halfSize + ix / segments * size;
+      const z = -level.halfSize + iz / segments * size;
+      vertices.push(x, terrainHeight(level, x, z), z);
+    }
+    for (let iz = 0; iz < segments; iz++) for (let ix = 0; ix < segments; ix++) {
+      const a = iz * (segments + 1) + ix, b = a + 1, c = a + segments + 1, d = c + 1;
+      indices.push(a, c, b, b, c, d);
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(indices); geometry.computeVertexNormals();
+    return geometry;
+  }
   function box(x, y, z, sx, sy, sz, material, shadow = true) {
     const mesh = new THREE.Mesh(boxGeo, material); mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz);
     mesh.castShadow = shadow; mesh.receiveShadow = true; scene.add(mesh); return mesh;
   }
-  box(0, -.35, 0, 37, .7, 37, floorMat);
-  const grid = new THREE.GridHelper(36, 24, '#759d73', '#426353'); grid.position.y = .015; scene.add(grid);
+  box(0, -.35, 0, 37, .7, 37, darkMat);
+  const terrainMesh = new THREE.Mesh(terrainGeometry(LEVELS[0]), floorMat);
+  terrainMesh.receiveShadow = true; scene.add(terrainMesh);
+  const grid = new THREE.GridHelper(36, 24, '#759d73', '#426353'); grid.position.y = .03; grid.material.transparent = true; grid.material.opacity = .2; scene.add(grid);
   for (const side of [-1, 1]) {
     box(side * 18.5, 1.5, 0, 1, 3, 38, wallMat);
     box(0, 1.5, side * 18.5, 36, 3, 1, wallMat);
@@ -211,13 +230,14 @@ if (renderer) {
     if (renderedLevel === game.levelIndex) return;
     renderedLevel = game.levelIndex; columns.clear();
     neonMat.color.set(game.level.color); floorMat.color.set(game.level.floor);
+    terrainMesh.geometry.dispose(); terrainMesh.geometry = terrainGeometry(game.level);
     for (const obstacle of game.obstacles) {
       const column = new THREE.Mesh(cylinderGeo, darkMat);
-      column.position.set(obstacle.x, 1.8, obstacle.z); column.scale.set(obstacle.radius, 3.6, obstacle.radius);
+      column.position.set(obstacle.x, terrainHeight(game.level, obstacle.x, obstacle.z) + 1.8, obstacle.z); column.scale.set(obstacle.radius, 3.6, obstacle.radius);
       column.castShadow = true; column.receiveShadow = true; columns.add(column);
       for (const y of [.14, 3.45]) {
         const band = new THREE.Mesh(cylinderGeo, orangeMat);
-        band.position.set(obstacle.x, y, obstacle.z); band.scale.set(obstacle.radius * 1.015, .09, obstacle.radius * 1.015); columns.add(band);
+        band.position.set(obstacle.x, terrainHeight(game.level, obstacle.x, obstacle.z) + y, obstacle.z); band.scale.set(obstacle.radius * 1.015, .09, obstacle.radius * 1.015); columns.add(band);
       }
     }
   }
@@ -310,25 +330,25 @@ if (renderer) {
       }
     }
     syncLevel();
-    portal.position.set(game.level.portal.x, 0, game.level.portal.z);
+    portal.position.set(game.level.portal.x, terrainHeight(game.level, game.level.portal.x, game.level.portal.z), game.level.portal.z);
     portalMat.opacity = game.portalOpen ? .95 : .2;
     if (!reducedMotion) portalRing.rotation.y = time / 1800;
     const points = game.bodyPoints(.6);
     body.count = Math.max(0, points.length - 1);
     for (let i = 1; i < points.length; i++) {
       const p = points[i], previous = points[i - 1];
-      dummy.position.set(p.x, .49, p.z); dummy.rotation.set(0, Math.atan2(previous.x - p.x, previous.z - p.z), 0);
+      dummy.position.set(p.x, (p.y || 0) + .49, p.z); dummy.rotation.set(0, Math.atan2(previous.x - p.x, previous.z - p.z), 0);
       const taper = Math.min(1, .4 + (points.length - i) / 4);
       dummy.scale.set(taper, .82 * taper, 1.03); dummy.updateMatrix(); body.setMatrixAt(i - 1, dummy.matrix);
     }
     body.instanceMatrix.needsUpdate = true;
-    head.position.set(game.head.x, .52, game.head.z); head.rotation.y = -game.yaw; head.visible = view === 'chase' || state === 'ready';
+    head.position.set(game.head.x, (game.head.y || 0) + .52, game.head.z); head.rotation.y = -game.yaw; head.visible = view === 'chase' || state === 'ready';
     const bob = reducedMotion ? 0 : Math.sin(time / 350) * .12;
     pickups.forEach(({ group, orb, ring, beacon }, i) => {
       const p = i === 3 ? game.gold : game.foods[i];
       group.visible = beacon.visible = Boolean(p);
       if (!p) return;
-      group.position.set(p.x, 1.05 + bob, p.z); beacon.position.set(p.x, 2.5, p.z);
+      group.position.set(p.x, (p.y || 0) + 1.05 + bob, p.z); beacon.position.set(p.x, (p.y || 0) + 2.5, p.z);
       if (!reducedMotion) { orb.rotation.y = time / 1000; ring.rotation.z = time / 1700; }
     });
     if (state === 'playing') feedbackRemaining = Math.max(0, feedbackRemaining - dt);
@@ -344,11 +364,14 @@ if (renderer) {
     if (state === 'ready' || state === 'between') {
       camera.position.set(24, 21, 29); camera.lookAt(0, 0, 0);
     } else if (view === 'ego') {
-      camera.position.set(game.head.x, 1.35, game.head.z);
+      camera.position.set(game.head.x, (game.head.y || 0) + 1.35, game.head.z);
       camera.rotation.set(pitch, -game.yaw, 0, 'YXZ');
     } else {
-      camera.position.set(THREE.MathUtils.clamp(game.head.x - Math.sin(game.yaw) * 5.5, -17, 17), 4.6, THREE.MathUtils.clamp(game.head.z + Math.cos(game.yaw) * 5.5, -17, 17));
-      camera.lookAt(game.head.x + Math.sin(game.yaw) * 2, .65, game.head.z - Math.cos(game.yaw) * 2);
+      const chaseX = THREE.MathUtils.clamp(game.head.x - Math.sin(game.yaw) * 5.5, -17, 17);
+      const chaseZ = THREE.MathUtils.clamp(game.head.z + Math.cos(game.yaw) * 5.5, -17, 17);
+      camera.position.set(chaseX, terrainHeight(game.level, chaseX, chaseZ) + 4.6, chaseZ);
+      const lookX = game.head.x + Math.sin(game.yaw) * 2, lookZ = game.head.z - Math.cos(game.yaw) * 2;
+      camera.lookAt(lookX, terrainHeight(game.level, lookX, lookZ) + .65, lookZ);
     }
     const nearest = game.foods.reduce((best, p) => !best || distance(game.head, p) < distance(game.head, best) ? p : best, null);
     function direction(p, label) {

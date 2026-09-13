@@ -36,6 +36,12 @@ Drei Level bilden einen Run:
 2. **Slalom:** versetzte Säulenreihen, 7 Meter Startlänge.
 3. **Zitadelle:** dichte Mitte und freie Außenwege, 8 Meter Startlänge.
 
+Jede Arena hat ein begehbares 3D-Gelände. Hügel, Rampen und Plateaus verändern die Höhe
+unter der Schlange; ihre Segmente, Energie, Gold und Portale liegen direkt auf der Oberfläche.
+Die Egoperspektive steigt und fällt mit dem Gelände, während die Verfolgerkamera den Höhen-
+unterschied sichtbar macht. Die Minikarte bleibt als Draufsicht erhalten, damit die räumliche
+Orientierung trotz Steigungen klar bleibt.
+
 Pro Level öffnen 10 Kugeln (inklusive Gold) das blaue Ausgangsportal. Danach verschwinden
 Energie und Gold; erreiche den Ring, um das Level zu beenden. Erst der dritte Ausgang
 gewinnt den Run. Portal, Fortschritt und Richtung werden im HUD und auf der Minikarte angezeigt.

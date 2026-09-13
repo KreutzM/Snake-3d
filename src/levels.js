@@ -1,20 +1,30 @@
 // Shared by simulation, rendering and minimap. Coordinates are in metres.
 export const LEVELS = [
   {
-    name: 'Einstieg', description: 'Viel Platz für deine ersten Combos. Sammle 10 Kugeln und erreiche das blaue Portal.',
+    name: 'Einstieg', description: 'Sanfte Hügel und breite Rampen führen auf ein 3,5 Meter hohes Plateau. Sammle 10 Kugeln und erreiche das Portal.',
     halfSize: 18, start: { x: 0, z: 9 }, startLength: 6, target: 10,
     foods: [{ x: 0, z: 1 }, { x: -4, z: 1 }, { x: 4, z: 1 }],
-    portal: { x: 12, z: -12 }, color: '#bdf986', floor: '#263a35',
+    portal: { x: 9, z: -10 }, color: '#bdf986', floor: '#263a35',
+    terrain: [
+      { type: 'hill', x: -9, z: -2, radius: 7, height: 2.5 },
+      { type: 'hill', x: 10, z: 7, radius: 6, height: 2 },
+      { type: 'plateau', x: 8, z: -9, halfX: 3, halfZ: 3, ramp: 5, height: 3.5 },
+    ],
     obstacles: [
       { x: -7, z: -5, radius: 1.35 }, { x: 7, z: -5, radius: 1.35 },
       { x: 0, z: -11, radius: 1.5 },
     ],
   },
   {
-    name: 'Slalom', description: 'Versetzte Säulenreihen verlangen weite, geplante Kurven. Dein Startkörper ist 7 Meter lang.',
+    name: 'Slalom', description: 'Ein Tal zwischen Höhenwegen: Plane deine Kurven über sanfte Hänge und ein 4 Meter hohes Plateau. Startlänge: 7 Meter.',
     halfSize: 18, start: { x: 0, z: 7 }, startLength: 7, target: 10,
     foods: [{ x: 0, z: -1 }, { x: -4, z: -1 }, { x: 4, z: -1 }],
-    portal: { x: -12, z: -12 }, color: '#82cfff', floor: '#24333f',
+    portal: { x: -9, z: -10 }, color: '#82cfff', floor: '#24333f',
+    terrain: [
+      { type: 'plateau', x: -8, z: -6, halfX: 3, halfZ: 5, ramp: 5, height: 4 },
+      { type: 'hill', x: 9, z: -7, radius: 8, height: 3.5 },
+      { type: 'hill', x: 10, z: 8, radius: 6, height: 2.5 },
+    ],
     obstacles: [
       { x: -10, z: -6, radius: 1.4 }, { x: 0, z: -6, radius: 1.4 }, { x: 10, z: -6, radius: 1.4 },
       { x: -5, z: 3, radius: 1.4 }, { x: 5, z: 3, radius: 1.4 },
@@ -22,10 +32,15 @@ export const LEVELS = [
     ],
   },
   {
-    name: 'Zitadelle', description: 'Eine dichte Mitte, freie Außenwege und 8 Meter Startlänge. Plane auch deinen Weg zum letzten Portal.',
+    name: 'Zitadelle', description: 'Erklimme die 5 Meter hohe Zitadelle über breite Rampen. Die äußeren Hügel bieten Ausweichrouten. Startlänge: 8 Meter.',
     halfSize: 18, start: { x: 0, z: 7 }, startLength: 8, target: 10,
     foods: [{ x: 0, z: -1 }, { x: -3, z: 2 }, { x: 3, z: 2 }],
-    portal: { x: 0, z: -14 }, color: '#d4acff', floor: '#352d40',
+    portal: { x: 0, z: -10 }, color: '#d4acff', floor: '#352d40',
+    terrain: [
+      { type: 'plateau', x: 0, z: -6, halfX: 7, halfZ: 5, ramp: 5, height: 5 },
+      { type: 'hill', x: -11, z: 8, radius: 6, height: 3 },
+      { type: 'hill', x: 11, z: 8, radius: 6, height: 3 },
+    ],
     obstacles: [
       { x: -6, z: -6, radius: 1.5 }, { x: 0, z: -6, radius: 1.5 }, { x: 6, z: -6, radius: 1.5 },
       { x: -6, z: 0, radius: 1.4 }, { x: 6, z: 0, radius: 1.4 },

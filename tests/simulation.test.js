@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SnakeSimulation, CLEAN_LEVEL_BONUS, LEVELS, OBSTACLES, distance } from '../src/simulation.js';
+import { terrainHeight, distance3D, surfaceStep } from '../src/terrain.js';
 
 test('moves continuously and collects energy, growing by two metres', () => {
   const game = new SnakeSimulation(() => .5);
@@ -119,7 +120,7 @@ test('three portal exits preserve total points, reset level state and finish the
     assert.equal(game.levelEaten, 0); assert.equal(game.length, LEVELS[level].startLength);
     assert.equal(game.combo, 0); assert.equal(game.levelBestCombo, 0);
     assert.equal(game.goldCountdown, 15); assert.equal(game.gold, null);
-    assert.deepEqual(game.head, LEVELS[level].start);
+    assert.deepEqual({ x: game.head.x, z: game.head.z }, LEVELS[level].start);
     for (let i = 0; i < 10; i++) collect(game);
     assert.equal(game.levelBestCombo, 5); score = game.score;
     game.head = { ...game.level.portal };
@@ -195,7 +196,7 @@ test('later-level retries restore the checkpoint, including body, timers and por
   assert.equal(game.levelEaten, 0); assert.equal(game.portalOpen, false);
   assert.equal(game.combo, 0); assert.equal(game.levelBestCombo, 0);
   assert.equal(game.goldRemaining, 0); assert.equal(game.goldCountdown, 15);
-  assert.equal(game.length, game.level.startLength); assert.deepEqual(game.head, game.level.start);
+  assert.equal(game.length, game.level.startLength); assert.deepEqual({ x: game.head.x, z: game.head.z }, game.level.start);
   assert.equal(game.foods.length, 3); assert.equal(game.travel, 0);
 });
 test('retrying cannot farm points or restore the clean-level bonus', () => {
@@ -227,4 +228,31 @@ test('columns and self-collisions also consume a life', () => {
   column.update(1 / 120, 0, 6); assert.equal(column.lives, 2);
   const body = new SnakeSimulation(); body.path.push({ x: body.head.x, z: body.head.z - .1, d: -4 });
   body.update(1 / 120, 0, 6); assert.equal(body.lives, 2);
+});
+
+test('terrain produces real height differences and keeps movement on the surface', () => {
+  const game = new SnakeSimulation();
+  assert.equal(terrainHeight(LEVELS[0], 0, 9), game.head.y);
+  assert.ok(terrainHeight(LEVELS[0], 8, -9) > 2.5);
+  assert.ok(terrainHeight(LEVELS[1], -8, -6) > 3);
+  assert.ok(terrainHeight(LEVELS[2], 0, -6) > 4);
+  const before = { x: -9, z: 5, y: terrainHeight(LEVELS[0], -9, 5) };
+  const stepped = surfaceStep(LEVELS[0], before, 0, 8);
+  assert.ok(stepped.y > before.y);
+  assert.ok(Math.abs(stepped.y - terrainHeight(LEVELS[0], stepped.x, stepped.z)) < 1e-8);
+  game.head = { ...before }; game.path = [{ ...before, d: 0 }];
+  for (let i = 0; i < 120; i++) game.update(1 / 120, 0, 4.8);
+  assert.ok(game.alive);
+  assert.ok(Math.abs(game.head.y - terrainHeight(game.level, game.head.x, game.head.z)) < 1e-8);
+  assert.ok(game.bodyPoints().some(p => (p.y || 0) > .5));
+});
+
+test('terrain is continuous at arena edges and targets receive surface heights', () => {
+  for (const level of LEVELS) {
+    assert.equal(terrainHeight(level, level.halfSize, 0), 0);
+    assert.equal(terrainHeight(level, -level.halfSize, 0), 0);
+    const game = new SnakeSimulation(); game.loadLevel(LEVELS.indexOf(level));
+    for (const food of game.foods) assert.equal(food.y, terrainHeight(level, food.x, food.z));
+    assert.equal(game.portal.y, terrainHeight(level, level.portal.x, level.portal.z));
+  }
 });
