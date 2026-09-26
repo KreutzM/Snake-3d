@@ -34,12 +34,14 @@ export const LEVELS = [
   {
     name: 'Zitadelle', description: 'Erklimme die 5 Meter hohe Zitadelle über breite Rampen. Die äußeren Hügel bieten Ausweichrouten. Startlänge: 8 Meter.',
     halfSize: 18, start: { x: 0, z: 7 }, startLength: 8, target: 10,
-    foods: [{ x: 0, z: -1 }, { x: -3, z: 2 }, { x: 3, z: 2 }],
-    portal: { x: 0, z: -10 }, color: '#d4acff', floor: '#352d40',
+    foods: [{ x: 0, z: -1, surface: 'bridge:0' }, { x: -3, z: 2 }, { x: 3, z: 2 }],
+    portal: { x: 0, z: -10, surface: 'bridge:0' }, color: '#d4acff', floor: '#352d40',
     terrain: [
-      { type: 'plateau', x: 0, z: -6, halfX: 7, halfZ: 5, ramp: 5, height: 5 },
       { type: 'hill', x: -11, z: 8, radius: 6, height: 3 },
       { type: 'hill', x: 11, z: 8, radius: 6, height: 3 },
+    ],
+    structures: [
+      { type: 'bridge', x: 0, z: -4, width: 6, length: 12, height: 5, ramp: 4 },
     ],
     obstacles: [
       { x: -6, z: -6, radius: 1.5 }, { x: 0, z: -6, radius: 1.5 }, { x: 6, z: -6, radius: 1.5 },

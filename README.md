@@ -17,6 +17,9 @@ zum Spielen ist kein CDN und keine Installation nötig. WebGL 2 ist erforderlich
 - **Leertaste:** starten, pausieren, fortsetzen. **Esc:** pausieren und Maus freigeben.
 - **Touch:** Richtungstasten gedrückt halten; auf dem Spielfeld ziehen zum Umsehen.
 
+Im Startmenü kann **Direkt in Level 3 starten** aktiviert werden. Die Auswahl wird gespeichert
+und gilt für neue Runs und Neustarts, damit die Brückenarena direkt ausprobiert werden kann.
+
 Die Tempostufen verdoppeln sich jeweils: **Chill 2,4 m/s**, **Flow 4,8 m/s**,
 **Rush 9,6 m/s**. W erhöht das gewählte Tempo um 40 %, S bremst auf 58 %.
 Das gewählte Tempo bleibt beim Wiederholen und beim Levelwechsel erhalten.
@@ -41,6 +44,11 @@ unter der Schlange; ihre Segmente, Energie, Gold und Portale liegen direkt auf d
 Die Egoperspektive steigt und fällt mit dem Gelände, während die Verfolgerkamera den Höhen-
 unterschied sichtbar macht. Die Minikarte bleibt als Draufsicht erhalten, damit die räumliche
 Orientierung trotz Steigungen klar bleibt.
+
+Level 3 enthält zusätzlich eine echte Routenentscheidung: Eine Rampe führt auf eine fünf
+Meter hohe Brücke, darunter bleibt eine befahrbare Unterführung am Boden. Wer auf der Brücke
+seitlich aus dem Korridor fährt, stürzt und verliert ein Leben. Brückenrampen wechseln die
+Oberflächenebene automatisch; die Minikarte zeigt die obere Route als blaues Portalziel.
 
 Pro Level öffnen 10 Kugeln (inklusive Gold) das blaue Ausgangsportal. Danach verschwinden
 Energie und Gold; erreiche den Ring, um das Level zu beenden. Erst der dritte Ausgang

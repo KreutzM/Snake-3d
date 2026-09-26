@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SnakeSimulation, CLEAN_LEVEL_BONUS, LEVELS, OBSTACLES, distance } from '../src/simulation.js';
-import { terrainHeight, distance3D, surfaceStep } from '../src/terrain.js';
+import { terrainHeight, surfaceHeight, distance3D, surfaceStep } from '../src/terrain.js';
 
 test('moves continuously and collects energy, growing by two metres', () => {
   const game = new SnakeSimulation(() => .5);
@@ -235,7 +235,7 @@ test('terrain produces real height differences and keeps movement on the surface
   assert.equal(terrainHeight(LEVELS[0], 0, 9), game.head.y);
   assert.ok(terrainHeight(LEVELS[0], 8, -9) > 2.5);
   assert.ok(terrainHeight(LEVELS[1], -8, -6) > 3);
-  assert.ok(terrainHeight(LEVELS[2], 0, -6) > 4);
+  assert.ok(surfaceHeight(LEVELS[2], 0, -4, 'bridge:0') > 4);
   const before = { x: -9, z: 5, y: terrainHeight(LEVELS[0], -9, 5) };
   const stepped = surfaceStep(LEVELS[0], before, 0, 8);
   assert.ok(stepped.y > before.y);
@@ -252,7 +252,36 @@ test('terrain is continuous at arena edges and targets receive surface heights',
     assert.equal(terrainHeight(level, level.halfSize, 0), 0);
     assert.equal(terrainHeight(level, -level.halfSize, 0), 0);
     const game = new SnakeSimulation(); game.loadLevel(LEVELS.indexOf(level));
-    for (const food of game.foods) assert.equal(food.y, terrainHeight(level, food.x, food.z));
-    assert.equal(game.portal.y, terrainHeight(level, level.portal.x, level.portal.z));
+    for (const food of game.foods) assert.equal(food.y, surfaceHeight(level, food.x, food.z, food.surface || 'ground'));
+    assert.equal(game.portal.y, surfaceHeight(level, level.portal.x, level.portal.z, level.portal.surface || 'ground'));
   }
+});
+
+test('level three offers an upper bridge and a lower underpass route', () => {
+  const upper = new SnakeSimulation(); upper.loadLevel(2);
+  upper.head = { x: 0, y: 0, z: 7, surface: 'ground' }; upper.path = [{ ...upper.head, d: 0 }];
+  for (let i = 0; i < 100; i++) upper.update(1 / 120, 0, 4.8);
+  assert.equal(upper.surface, 'bridge:0');
+  assert.ok(upper.head.y > 2);
+  assert.ok(upper.bodyPoints().some(p => p.surface === 'bridge:0'));
+  upper.head = { x: 0, y: surfaceHeight(upper.level, 0, -5, 'bridge:0'), z: -5, surface: 'bridge:0' };
+  upper.path = [{ ...upper.head, d: upper.travel }];
+  assert.equal(upper.update(1 / 120, 0, 0), null); // the bridge passes above the central column
+
+  const lower = new SnakeSimulation(); lower.loadLevel(2);
+  lower.head = { x: 8, y: terrainHeight(lower.level, 8, 7), z: 7, surface: 'ground' };
+  lower.path = [{ ...lower.head, d: 0 }];
+  for (let i = 0; i < 180; i++) lower.update(1 / 120, 0, 4.8);
+  assert.equal(lower.surface, 'ground');
+  assert.ok(lower.head.z < 1);
+  assert.ok(lower.head.y < 1);
+});
+
+test('leaving a bridge sideways costs a life instead of teleporting to ground', () => {
+  const game = new SnakeSimulation(); game.loadLevel(2);
+  game.surface = 'bridge:0';
+  game.head = { x: 3.2, y: surfaceHeight(game.level, 3.2, -4, 'bridge:0'), z: -4, surface: 'bridge:0' };
+  game.path = [{ ...game.head, d: 0 }];
+  assert.equal(game.update(1 / 120, Math.PI / 2, 4.8), 'collision');
+  assert.match(game.reason, /Brücke/); assert.equal(game.lives, 2);
 });

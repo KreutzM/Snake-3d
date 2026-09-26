@@ -1,4 +1,4 @@
-import { onTerrain, distance3D, surfaceStep } from './terrain.js';
+import { onTerrain, terrainHeight, distance3D, surfaceStep, surfaceTransition } from './terrain.js';
 import { LEVELS } from './levels.js';
 export { LEVELS };
 export const HALF_SIZE = 18;
@@ -24,14 +24,15 @@ export class SnakeSimulation {
   get portalOpen() { return this.levelEaten >= this.level.target; }
   loadLevel(index, retry = false) {
     this.levelIndex = index;
-    this.head = onTerrain(this.level, this.level.start); this.yaw = 0; this.travel = 0;
+    this.surface = this.level.start.surface || 'ground';
+    this.head = onTerrain(this.level, this.level.start, this.surface); this.yaw = 0; this.travel = 0;
     this.length = this.level.startLength; this.alive = true; this.won = false;
     this.levelComplete = false; this.levelEaten = 0; this.levelBestCombo = 0;
     this.levelStartScore = this.score;
     this.levelStartEaten = this.eaten;
     this.levelDeaths = retry ? this.levelDeaths : 0;
     this.levelBonus = 0; this.lostPoints = 0;
-    this.reason = ''; this.foods = this.level.foods.map(p => onTerrain(this.level, p));
+    this.reason = ''; this.foods = this.level.foods.map(p => onTerrain(this.level, p, p.surface || 'ground'));
     this.combo = 0; this.comboRemaining = 0;
     this.gold = null; this.goldRemaining = 0; this.goldCountdown = GOLD_INTERVAL;
     this.lastPickup = null;
@@ -39,7 +40,7 @@ export class SnakeSimulation {
     let previous = this.head, d = 0;
     this.path.push({ ...previous, d });
     while (d > -this.length - 1) {
-      const point = onTerrain(this.level, { x: previous.x, z: previous.z + .1 });
+      const point = onTerrain(this.level, { x: previous.x, z: previous.z + .1 }, this.surface);
       d -= distance3D(previous, point); this.path.push({ ...point, d }); previous = point;
     }
   }
@@ -60,7 +61,7 @@ export class SnakeSimulation {
       while (index < this.path.length - 2 && this.path[index + 1].d > target) index++;
       const a = this.path[index], b = this.path[index + 1] || a;
       const t = a.d === b.d ? 0 : Math.max(0, Math.min(1, (a.d - target) / (a.d - b.d)));
-      points.push({ x: a.x + (b.x - a.x) * t, y: (a.y || 0) + ((b.y || 0) - (a.y || 0)) * t, z: a.z + (b.z - a.z) * t });
+      points.push({ x: a.x + (b.x - a.x) * t, y: (a.y || 0) + ((b.y || 0) - (a.y || 0)) * t, z: a.z + (b.z - a.z) * t, surface: t < .5 ? a.surface : b.surface });
     }
     return points;
   }
@@ -104,10 +105,20 @@ export class SnakeSimulation {
     }
     this.yaw += Math.max(-2.7 * dt, Math.min(2.7 * dt, wrapAngle(targetYaw - this.yaw)));
     this.head = onTerrain(this.level, this.head);
-    const next = surfaceStep(this.level, this.head, this.yaw, speed * dt);
-    let reason = '';
+    let next = surfaceStep(this.level, this.head, this.yaw, speed * dt, this.surface);
+    const nextSurface = surfaceTransition(this.level, this.head, next);
+    if (nextSurface !== this.surface && nextSurface !== 'fall') {
+      this.surface = nextSurface;
+      next = surfaceStep(this.level, this.head, this.yaw, speed * dt, this.surface);
+      next.surface = this.surface;
+    }
+    let reason = nextSurface === 'fall' ? 'Du bist von der Brücke gefallen.' : '';
     if (Math.abs(next.x) > this.level.halfSize - .5 || Math.abs(next.z) > this.level.halfSize - .5) reason = 'Die Arenawand war schneller.';
-    else if (this.obstacles.some(o => distance(next, o) < o.radius + .43)) reason = 'Eine Säule hat deinen Run gestoppt.';
+    else if (this.obstacles.some(o => {
+      const horizontal = distance(next, o), base = terrainHeight(this.level, o.x, o.z);
+      const vertical = (next.y || 0) > base - .43 && (next.y || 0) < base + 3.6 + .43;
+      return horizontal < o.radius + .43 && vertical;
+    })) reason = 'Eine Säule hat deinen Run gestoppt.';
     else if (this.path.some(p => this.travel - p.d > 2.5 && this.travel - p.d < this.length && distance3D(next, p) < .78)) reason = 'Dein eigener Körper hat den Weg gekreuzt.';
     if (reason) {
       this.alive = false; this.reason = reason; this.lives--; this.levelDeaths++;
@@ -116,7 +127,7 @@ export class SnakeSimulation {
       return 'collision';
     }
     this.travel += distance3D(this.head, next); this.head = next;
-    this.path.unshift({ ...next, d: this.travel });
+    this.path.unshift({ ...next, d: this.travel, surface: this.surface });
     while (this.path.length > 2 && this.path.at(-2).d < this.travel - this.length - .3) this.path.pop();
     if (this.portalOpen && distance3D(this.head, this.portal) < 1.5) {
       this.levelComplete = true;

@@ -309,3 +309,21 @@ test('audio activation failures can be retried without breaking gameplay', async
   await expect(page.locator('#sound')).toHaveAttribute('aria-pressed', 'true');
   expect(errors).toEqual([]);
 });
+
+test('start menu can launch a fresh run directly in level three and remembers the choice', async ({ page }) => {
+  await page.goto('/');
+  const shortcut = page.locator('#direct-level3');
+  await expect(shortcut).not.toBeChecked();
+  await page.getByText('Direkt in Level 3 starten').click();
+  await page.getByRole('button', { name: 'Spiel starten' }).click();
+  await expect(page.locator('#level-hud')).toContainText('L3');
+  await expect(page.locator('#level-name')).toContainText('3 / 3');
+  await expect(page.locator('#score')).toHaveText('000');
+  await expect(page.locator('#lives-value')).toHaveText('3 / 3');
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await expect(page.locator('#direct-level3')).toBeChecked();
+  await page.getByRole('button', { name: 'Spiel starten' }).click();
+  await expect(page.locator('#level-hud')).toContainText('L3');
+  await page.keyboard.press('m');
+});

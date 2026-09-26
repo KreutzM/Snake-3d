@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SnakeSimulation, LEVELS, COMBO_WINDOW, CLEAN_LEVEL_BONUS, wrapAngle, distance } from './simulation.js';
-import { terrainHeight } from './terrain.js';
+import { terrainHeight, surfaceHeight } from './terrain.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('game');
@@ -8,10 +8,12 @@ const game = new SnakeSimulation();
 const SPEEDS = { chill: 2.4, flow: 4.8, rush: 9.6 };
 let state = 'ready', view = 'ego', targetYaw = 0, pitch = -.07, baseSpeed = SPEEDS.flow;
 let best = 0, sound = true, audioContext, lastTime = 0, accumulator = 0;
+let directLevel3 = false;
 const keys = new Set();
 const voices = new Set();
 let audioRevision = 0, audioFailed = false;
 try { sound = localStorage.getItem('snake3d-sound') !== 'off'; } catch {}
+try { directLevel3 = localStorage.getItem('snake3d-direct-level3') === 'on'; } catch {}
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 try { best = Math.max(0, Number(localStorage.getItem('snake3d-lives-best')) || 0); } catch {}
 const format = n => String(n).padStart(3, '0');
@@ -97,7 +99,11 @@ function start() {
   if (state === 'error') return;
   if (state === 'between') { game.nextLevel(); targetYaw = game.yaw; pitch = -.07; stats(); }
   else if (state === 'retry') { game.retryLevel(); targetYaw = game.yaw; pitch = -.07; stats(); }
-  else if (state !== 'paused') { game.reset(); targetYaw = game.yaw; pitch = -.07; stats(); }
+  else if (state !== 'paused') {
+    game.reset();
+    if (directLevel3) game.loadLevel(2);
+    targetYaw = game.yaw; pitch = -.07; stats();
+  }
   $('pickup-feedback').textContent = ''; keys.clear(); state = 'playing'; accumulator = 0; lastTime = performance.now();
   $('overlay').classList.add('hidden'); $('pause').disabled = false;
   $('pause').innerHTML = 'Ⅱ <span>PAUSE</span>'; $('status').textContent = game.portalOpen ? 'ZUM PORTAL' : 'IM FLOW';
@@ -225,10 +231,13 @@ if (renderer) {
   }
   const cylinderGeo = new THREE.CylinderGeometry(1, 1, 1, 8);
   const columns = new THREE.Group(); scene.add(columns);
+  const bridges = new THREE.Group(); scene.add(bridges);
+  const bridgeMaterial = mat('#4b6070', { roughness: .48, metalness: .38 });
+  const bridgeGlow = new THREE.MeshBasicMaterial({ color: '#8deaff' });
   let renderedLevel = -1;
   function syncLevel() {
     if (renderedLevel === game.levelIndex) return;
-    renderedLevel = game.levelIndex; columns.clear();
+    renderedLevel = game.levelIndex; columns.clear(); bridges.clear();
     neonMat.color.set(game.level.color); floorMat.color.set(game.level.floor);
     terrainMesh.geometry.dispose(); terrainMesh.geometry = terrainGeometry(game.level);
     for (const obstacle of game.obstacles) {
@@ -238,6 +247,29 @@ if (renderer) {
       for (const y of [.14, 3.45]) {
         const band = new THREE.Mesh(cylinderGeo, orangeMat);
         band.position.set(obstacle.x, terrainHeight(game.level, obstacle.x, obstacle.z) + y, obstacle.z); band.scale.set(obstacle.radius * 1.015, .09, obstacle.radius * 1.015); columns.add(band);
+      }
+    }
+    for (let i = 0; i < (game.level.structures || []).length; i++) {
+      const structure = game.level.structures[i];
+      if (structure.type !== 'bridge') continue;
+      const bridgeBase = terrainHeight(game.level, structure.x, structure.z);
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(structure.width, .38, structure.length), bridgeMaterial);
+      deck.position.set(structure.x, bridgeBase + structure.height, structure.z); deck.castShadow = deck.receiveShadow = true; bridges.add(deck);
+      const angle = Math.atan2(structure.height, structure.ramp);
+      for (const side of [-1, 1]) {
+        const ramp = new THREE.Mesh(new THREE.BoxGeometry(structure.width, .32, structure.ramp), bridgeMaterial);
+        ramp.position.set(structure.x, bridgeBase + structure.height / 2, structure.z + side * (structure.length / 2 + structure.ramp / 2));
+        ramp.rotation.x = side * angle; ramp.castShadow = ramp.receiveShadow = true; bridges.add(ramp);
+      }
+      for (const side of [-1, 1]) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(.14, .72, structure.length), bridgeGlow);
+        rail.position.set(structure.x + side * structure.width / 2, bridgeBase + structure.height + .42, structure.z); bridges.add(rail);
+        for (const supportZ of [structure.z - structure.length / 3, structure.z + structure.length / 3]) {
+          const supportHeight = structure.height;
+          const support = new THREE.Mesh(new THREE.BoxGeometry(.4, supportHeight, .4), bridgeMaterial);
+          support.position.set(structure.x + side * (structure.width / 2 - .5), bridgeBase + supportHeight / 2, supportZ);
+          support.castShadow = support.receiveShadow = true; bridges.add(support);
+        }
       }
     }
   }
@@ -330,7 +362,7 @@ if (renderer) {
       }
     }
     syncLevel();
-    portal.position.set(game.level.portal.x, terrainHeight(game.level, game.level.portal.x, game.level.portal.z), game.level.portal.z);
+    portal.position.set(game.level.portal.x, surfaceHeight(game.level, game.level.portal.x, game.level.portal.z, game.level.portal.surface || 'ground'), game.level.portal.z);
     portalMat.opacity = game.portalOpen ? .95 : .2;
     if (!reducedMotion) portalRing.rotation.y = time / 1800;
     const points = game.bodyPoints(.6);
@@ -364,14 +396,26 @@ if (renderer) {
     if (state === 'ready' || state === 'between') {
       camera.position.set(24, 21, 29); camera.lookAt(0, 0, 0);
     } else if (view === 'ego') {
+      const surface = game.surface || game.head.surface || 'ground';
+      const lookDistance = 3;
+      const lookX = game.head.x + Math.sin(game.yaw) * lookDistance;
+      const lookZ = game.head.z - Math.cos(game.yaw) * lookDistance;
       camera.position.set(game.head.x, (game.head.y || 0) + 1.35, game.head.z);
-      camera.rotation.set(pitch, -game.yaw, 0, 'YXZ');
+      camera.lookAt(
+        lookX,
+        surfaceHeight(game.level, lookX, lookZ, surface) + 1.35 + Math.tan(pitch) * lookDistance,
+        lookZ
+      );
     } else {
+      const surface = game.surface || game.head.surface || 'ground';
       const chaseX = THREE.MathUtils.clamp(game.head.x - Math.sin(game.yaw) * 5.5, -17, 17);
       const chaseZ = THREE.MathUtils.clamp(game.head.z + Math.cos(game.yaw) * 5.5, -17, 17);
-      camera.position.set(chaseX, terrainHeight(game.level, chaseX, chaseZ) + 4.6, chaseZ);
+      const chaseGroundY = terrainHeight(game.level, chaseX, chaseZ);
+      const chaseSurfaceY = surfaceHeight(game.level, chaseX, chaseZ, surface);
+      const cameraY = Math.max(chaseGroundY + 4.6, chaseSurfaceY + 3.8, (game.head.y || 0) + 3.8);
+      camera.position.set(chaseX, cameraY, chaseZ);
       const lookX = game.head.x + Math.sin(game.yaw) * 2, lookZ = game.head.z - Math.cos(game.yaw) * 2;
-      camera.lookAt(lookX, terrainHeight(game.level, lookX, lookZ) + .65, lookZ);
+      camera.lookAt(lookX, surfaceHeight(game.level, lookX, lookZ, surface) + .65, lookZ);
     }
     const nearest = game.foods.reduce((best, p) => !best || distance(game.head, p) < distance(game.head, best) ? p : best, null);
     function direction(p, label) {
@@ -402,6 +446,12 @@ $('start').addEventListener('click', start); $('pause').addEventListener('click'
 $('camera').addEventListener('click', toggleView);
 $('sound').addEventListener('click', toggleSound);
 soundButton();
+const directStart = $('direct-level3');
+directStart.checked = directLevel3;
+directStart.addEventListener('change', () => {
+  directLevel3 = directStart.checked;
+  try { localStorage.setItem('snake3d-direct-level3', directLevel3 ? 'on' : 'off'); } catch {}
+});
 
 document.querySelectorAll('[data-speed]').forEach(button => {
   button.setAttribute('aria-pressed', String(button.classList.contains('selected')));
