@@ -30,7 +30,7 @@ export function surfaceHeight(level, x, z, surface = 'ground') {
   const halfLength = structure.length / 2;
   const distanceToDeck = Math.max(0, along - halfLength);
   const ramp = Math.max(0, Math.min(1, 1 - distanceToDeck / structure.ramp));
-  return base + structure.height * smooth(ramp);
+  return base + structure.height * ramp;
 }
 export function onTerrain(level, point, surface = 'ground') {
   return { x: point.x, y: surfaceHeight(level, point.x, point.z, point.surface || surface), z: point.z, surface: point.surface || surface };
@@ -59,22 +59,22 @@ export function surfaceTransition(level, from, next) {
   const structure = bridge(level, current);
   if (structure) {
     const along = Math.abs(next.z - structure.z);
+    const previousAlong = Math.abs(from.z - structure.z);
     const inside = Math.abs(next.x - structure.x) <= structure.width / 2 + .15;
-    const inRamp = Math.abs(next.z - structure.z) <= structure.length / 2 + structure.ramp;
     if (!inside) return 'fall';
-    if (!inRamp) return 'fall';
-    if (along <= structure.length / 2) return current;
-    if (along < Math.abs(from.z - structure.z)) return current;
-    return 'ground';
+    if (along <= structure.length / 2 + structure.ramp) return current;
+    // Leave the raised surface only after crossing the outer ramp foot.
+    return along >= previousAlong ? 'ground' : current;
   }
   for (let i = 0; i < (level.structures || []).length; i++) {
     const candidate = level.structures[i];
     if (candidate.type !== 'bridge') continue;
     const inside = Math.abs(next.x - candidate.x) <= candidate.width / 2;
+    const previousAlong = Math.abs(from.z - candidate.z);
     const along = Math.abs(next.z - candidate.z);
-    const atRampFoot = along >= candidate.length / 2 + candidate.ramp - .2;
-    const inRamp = along <= candidate.length / 2 + candidate.ramp;
-    if (inside && inRamp && atRampFoot) return `bridge:${i}`;
+    const rampFoot = candidate.length / 2 + candidate.ramp;
+    const enteringFromRampFoot = previousAlong >= rampFoot && along < previousAlong && along <= rampFoot;
+    if (inside && enteringFromRampFoot) return `bridge:${i}`;
   }
   return 'ground';
 }

@@ -277,6 +277,40 @@ test('level three offers an upper bridge and a lower underpass route', () => {
   assert.ok(lower.head.y < 1);
 });
 
+test('level three descent stays on the bridge until the outer ramp foot', () => {
+  const game = new SnakeSimulation(); game.loadLevel(2);
+  game.surface = 'bridge:0';
+  game.head = { x: 0, y: surfaceHeight(game.level, 0, -9, 'bridge:0'), z: -9, surface: 'bridge:0' };
+  game.path = [{ ...game.head, d: game.travel }];
+
+  for (let i = 0; i < 300 && game.surface !== 'ground'; i++) {
+    assert.notEqual(game.update(1 / 120, 0, 4.8), 'collision');
+    if (game.head.z < -10.5 && game.head.z > -14) assert.equal(game.surface, 'bridge:0');
+  }
+
+  assert.equal(game.surface, 'ground');
+  assert.ok(game.head.z <= -14);
+  assert.ok(game.head.y < .01);
+  assert.ok(game.alive);
+});
+
+test('level three can be entered from either ramp foot', () => {
+  for (const { z, yaw } of [{ z: 7, yaw: 0 }, { z: -15, yaw: Math.PI }]) {
+    const game = new SnakeSimulation(); game.loadLevel(2);
+    game.yaw = yaw;
+    game.head = { x: 0, y: terrainHeight(game.level, 0, z), z, surface: 'ground' };
+    game.path = [{ ...game.head, d: game.travel }];
+
+    for (let i = 0; i < 100 && game.surface === 'ground'; i++) {
+      assert.notEqual(game.update(1 / 120, yaw, 4.8), 'collision');
+    }
+
+    assert.equal(game.surface, 'bridge:0');
+    game.update(1 / 120, yaw, 4.8);
+    assert.ok(game.head.y > 0);
+  }
+});
+
 test('leaving a bridge sideways costs a life instead of teleporting to ground', () => {
   const game = new SnakeSimulation(); game.loadLevel(2);
   game.surface = 'bridge:0';

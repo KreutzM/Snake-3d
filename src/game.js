@@ -253,12 +253,15 @@ if (renderer) {
       const structure = game.level.structures[i];
       if (structure.type !== 'bridge') continue;
       const bridgeBase = terrainHeight(game.level, structure.x, structure.z);
-      const deck = new THREE.Mesh(new THREE.BoxGeometry(structure.width, .38, structure.length), bridgeMaterial);
-      deck.position.set(structure.x, bridgeBase + structure.height, structure.z); deck.castShadow = deck.receiveShadow = true; bridges.add(deck);
+      const deckThickness = .28;
+      const rampThickness = .28;
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(structure.width, deckThickness, structure.length), bridgeMaterial);
+      deck.position.set(structure.x, bridgeBase + structure.height - deckThickness / 2, structure.z); deck.castShadow = deck.receiveShadow = true; bridges.add(deck);
       const angle = Math.atan2(structure.height, structure.ramp);
       for (const side of [-1, 1]) {
-        const ramp = new THREE.Mesh(new THREE.BoxGeometry(structure.width, .32, structure.ramp), bridgeMaterial);
-        ramp.position.set(structure.x, bridgeBase + structure.height / 2, structure.z + side * (structure.length / 2 + structure.ramp / 2));
+        const slopeLength = Math.hypot(structure.ramp, structure.height) + .5;
+        const ramp = new THREE.Mesh(new THREE.BoxGeometry(structure.width, rampThickness, slopeLength), bridgeMaterial);
+        ramp.position.set(structure.x, bridgeBase + structure.height / 2 + rampThickness / 2 * Math.cos(angle), structure.z + side * (structure.length / 2 + structure.ramp / 2));
         ramp.rotation.x = side * angle; ramp.castShadow = ramp.receiveShadow = true; bridges.add(ramp);
       }
       for (const side of [-1, 1]) {
